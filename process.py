@@ -12,7 +12,7 @@ def create_uid():
 
 def get_file_id_and_url(cat_url, proxies):
 	try:
-		response = requests.get(cat_url, proxies=proxies)
+		response = requests.get(cat_url, proxies=proxies, timeout=5)
 	except Exception as e:
 		print(e)
 		return None, None, None
@@ -39,7 +39,7 @@ def get_file_id_and_url(cat_url, proxies):
 				"scheme": "https",
 				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.62 Safari/537.36"
 			}
-			id_resp = requests.get(url, headers=headers, proxies=proxies)
+			id_resp = requests.get(url, headers=headers, proxies=proxies, timeout=5)
 			string = re.search(r'''vip_downvip_down\(.*?\)''', id_resp.text).group()
 			# print(string)
 			file_id = re.sub("\D", "", string)
@@ -56,7 +56,7 @@ def getRealUrl(file_id, referer_url, cookies, proxies):
 		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36"
 		, "Referer": referer, "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"}
 	try:
-		image_response = requests.post(image_code_url, image_code_data, cookies=cookies, headers=headers, proxies=proxies)
+		image_response = requests.post(image_code_url, image_code_data, cookies=cookies, headers=headers, proxies=proxies,timeout=5)
 	except Exception as e:
 		print(e)
 		return None, None
@@ -135,7 +135,7 @@ def update(database_path, data):
 def select(database_path):
 	conn = sqlite3.connect(database_path)
 	c = conn.cursor()
-	cursor = c.execute("SELECT cat_url from results where real_url is null ")
+	cursor = c.execute("SELECT cat_url from results desc where real_url is null order by id desc")
 	cat_urls = list()
 	for row in cursor:
 		if row[0] != 'null' and re.search("http", row[0]) is not None:
@@ -169,8 +169,9 @@ if __name__ == '__main__':
 	else:
 		proxies = None
 	cat_urls = select("bai_spider.db")
-	print(len(cat_urls))
+	url_count = len(cat_urls)
 	for cat_url in cat_urls:
+		print(url_count)
 		file_id, referer_url, cookies = get_file_id_and_url(cat_url, proxies)
 		print(file_id)
 		if file_id is not None:
@@ -189,6 +190,7 @@ if __name__ == '__main__':
 					data["file_txt"] = file_txt
 					print("real写入数据库")
 					update("bai_spider.db", data)
+					url_count -= 1
 			else:
 				cat_urls.append(cat_url)
 		else:
